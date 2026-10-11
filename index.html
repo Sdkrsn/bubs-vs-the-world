@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>BUBS VS. THE WORLD</title>
+<style>
+  :root{
+    --cream:#fff6ea; --pink:#ffb6c9; --peach:#ffd9b3; --green:#8fcf8f;
+    --lavender:#cdb4ff; --sky:#aee4ff; --brown:#8a5a44; --dark:#4a3b36;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%; overflow:hidden;
+    background:linear-gradient(#aee4ff,#ffd9b3);
+    font-family:'Trebuchet MS','Segoe UI',sans-serif; touch-action:none;
+  }
+  #gameRoot{position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center;}
+  #gameFrame{position:relative; width:960px; height:540px; max-width:100%; max-height:100%;}
+  canvas{image-rendering:pixelated; image-rendering:crisp-edges; background:#aee4ff; display:block; touch-action:none; width:100%; height:100%;}
+  .screen{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:20px; z-index:10; color:var(--dark);
+    background:linear-gradient(160deg,var(--sky),var(--peach) 60%, var(--pink));
+  }
+  .hidden{display:none !important;}
+  h1.title{
+    font-size:clamp(28px,7vw,56px); margin:0 0 6px; color:#d14b7a;
+    text-shadow:3px 3px 0 #fff, 5px 5px 0 rgba(0,0,0,0.12); letter-spacing:1px;
+  }
+  .subtitle{font-size:clamp(14px,2.6vw,20px); margin:4px 0 14px; font-style:italic; color:#7a4a56;}
+  .note{font-size:14px; margin-top:16px; color:#6b4a40; font-style:italic;}
+  .bigBtn{
+    font-family:inherit; font-size:clamp(16px,3vw,22px); font-weight:bold; color:#fff;
+    background:#ff6f91; border:4px solid #fff; border-radius:16px; padding:14px 28px; margin:10px;
+    cursor:pointer; box-shadow:0 6px 0 #c23e63, 0 8px 10px rgba(0,0,0,0.2);
+    transition:transform .08s;
+  }
+  .bigBtn:active{transform:translateY(4px); box-shadow:0 2px 0 #c23e63;}
+  .cards{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; max-width:720px; margin-bottom:10px;}
+  .card{
+    background:#fffaf2; border:3px solid #ffb6c9; border-radius:12px; padding:10px 14px;
+    font-size:13px; min-width:130px; box-shadow:0 3px 0 rgba(0,0,0,0.08);
+  }
+  .card b{display:block; font-size:15px; color:#d14b7a; margin-bottom:2px;}
+  #hud{
+    position:absolute; top:10px; left:10px; right:10px; display:flex; justify-content:space-between;
+    align-items:flex-start; z-index:5; font-size:14px; pointer-events:none; color:var(--dark);
+  }
+  #healthBox, #heartBox{
+    background:rgba(255,255,255,0.75); border-radius:10px; padding:6px 10px; font-weight:bold;
+    box-shadow:0 2px 6px rgba(0,0,0,0.15);
+  }
+  #levelLabel{
+    position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:5;
+    background:rgba(255,255,255,0.75); border-radius:10px; padding:6px 14px; font-weight:bold; font-size:13px;
+    pointer-events:none;
+  }
+  #loveMeter{
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%); z-index:5;
+    width:200px; height:16px; background:rgba(255,255,255,0.6); border-radius:8px; overflow:hidden;
+    border:2px solid #fff; pointer-events:none;
+  }
+  #loveMeterFill{height:100%; width:0%; background:linear-gradient(90deg,#ff8fb0,#ff4f81); transition:width .15s;}
+  #floatMsgs{position:absolute; top:60px; left:50%; transform:translateX(-50%); z-index:6; pointer-events:none; text-align:center;}
+  .floatMsg{
+    font-weight:bold; color:#d14b7a; background:rgba(255,255,255,0.85); border-radius:8px; padding:4px 10px;
+    margin-bottom:4px; animation:floatUp 1.6s ease-out forwards; font-size:14px;
+  }
+  @keyframes floatUp{0%{opacity:0; transform:translateY(10px);}20%{opacity:1; transform:translateY(0);}80%{opacity:1;}100%{opacity:0; transform:translateY(-24px);}}
+  #pauseBtn{
+    position:absolute; top:10px; right:10px; z-index:7; background:rgba(255,255,255,0.8); border:none;
+    border-radius:50%; width:38px; height:38px; font-size:18px; cursor:pointer;
+  }
+  #muteBtn{
+    position:absolute; top:10px; right:56px; z-index:7; background:rgba(255,255,255,0.8); border:none;
+    border-radius:50%; width:38px; height:38px; font-size:16px; cursor:pointer;
+  }
+  #touchControls{position:absolute; inset:0; z-index:8; pointer-events:none;}
+  .touchBtn{
+    position:absolute; pointer-events:auto; background:rgba(255,255,255,0.55); border:3px solid rgba(255,255,255,0.9);
+    border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:bold;
+    color:#7a4a56; -webkit-user-select:none; touch-action:none;
+  }
+  .touchBtn:active, .touchBtn.active{background:rgba(255,182,201,0.85);}
+  #btnLeft{left:14px; bottom:30px; width:64px; height:64px;}
+  #btnRight{left:86px; bottom:30px; width:64px; height:64px;}
+  #btnJump{right:100px; bottom:34px; width:70px; height:70px;}
+  #btnAttack{right:20px; bottom:34px; width:70px; height:70px;}
+  #btnSpecial{right:60px; bottom:120px; width:56px; height:56px; font-size:16px;}
+  .overlayPanel{
+    position:absolute; inset:0; z-index:20; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(60,30,40,0.55); color:#fff; text-align:center; padding:20px;
+  }
+  .overlayPanel h2{font-size:clamp(22px,5vw,34px); margin-bottom:6px; text-shadow:2px 2px 0 rgba(0,0,0,0.3);}
+  .overlayPanel p{font-size:16px; margin:4px 0;}
+  @media (max-width:600px){
+    #btnJump{right:90px; bottom:28px; width:62px; height:62px;}
+    #btnAttack{right:16px; bottom:28px; width:62px; height:62px;}
+    #btnSpecial{right:48px; bottom:108px; width:48px; height:48px; font-size:13px;}
+    #btnLeft{width:56px; height:56px;} #btnRight{left:76px; width:56px; height:56px;}
+  }
+</style>
+</head>
+<body>
+<div id="gameRoot">
+
+  <!-- TITLE SCREEN -->
+  <div id="titleScreen" class="screen">
+    <h1 class="title">BUBS VS. THE WORLD</h1>
+    <div class="subtitle">One girl. Too many problems. One extremely annoying boyfriend.</div>
+    <p style="font-size:16px;">Hi bubs! Welcome to your very own tiny adventure.</p>
+    <p style="font-size:15px; max-width:480px;">Your mission: collect hearts, defeat the nonsense, and discover a secret surprise.</p>
+    <button class="bigBtn" id="startBtn">LET'S GO, BUBS!</button>
+    <div class="note">Made with an unreasonable amount of love by your man. ❤️</div>
+  </div>
+
+  <!-- INSTRUCTIONS SCREEN -->
+  <div id="instructionsScreen" class="screen hidden">
+    <h1 class="title" style="font-size:clamp(24px,5vw,38px);">HOW TO PLAY 🎮</h1>
+    <div class="subtitle">A tiny guide for our favourite menace.</div>
+    <div class="cards">
+      <div class="card"><b>← → / A D</b>Move left / right</div>
+      <div class="card"><b>↑ / W / SPACE</b>Jump</div>
+      <div class="card"><b>Z / J</b>Attack</div>
+      <div class="card"><b>X / K</b>Love Blast (charged)</div>
+      <div class="card"><b>ESC</b>Pause</div>
+    </div>
+    <p style="font-size:14px; max-width:480px;">1. Run, jump and explore. 2. Collect floating hearts. 3. Avoid hazards and defeat enemies. 4. Find the exit portal. 5. Complete every level to unlock a secret bonus round.</p>
+    <p style="font-size:13px; max-width:480px;">On your phone? Use the on-screen buttons!</p>
+    <p class="note">P.S. The boyfriend boss is entirely optional. (It's not.) 💀</p>
+    <button class="bigBtn" id="playBtn">OKAY, LET ME COOK 🔥</button>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="gameScreen" class="screen hidden" style="padding:0; background:none;">
+   <div id="gameFrame">
+    <canvas id="gameCanvas" width="960" height="540"></canvas>
+    <div id="hud">
+      <div id="healthBox">BUBS <span id="heartsDisplay">❤️❤️❤️</span></div>
+      <div id="heartBox">💛 <span id="heartCount">0</span></div>
+    </div>
+    <div id="levelLabel"></div>
+    <div id="loveMeter"><div id="loveMeterFill"></div></div>
+    <div id="floatMsgs"></div>
+    <button id="pauseBtn">⏸</button>
+    <button id="muteBtn">🔊</button>
+    <div id="touchControls">
+      <div class="touchBtn" id="btnLeft">◀</div>
+      <div class="touchBtn" id="btnRight">▶</div>
+      <div class="touchBtn" id="btnSpecial">💥</div>
+      <div class="touchBtn" id="btnJump">⤴</div>
+      <div class="touchBtn" id="btnAttack">👊</div>
+    </div>
+
+    <div id="pausePanel" class="overlayPanel hidden">
+      <h2>PAUSED</h2>
+      <button class="bigBtn" id="resumeBtn">RESUME</button>
+      <button class="bigBtn" id="restartBtn">RESTART LEVEL</button>
+    </div>
+
+    <div id="retryPanel" class="overlayPanel hidden">
+      <h2 id="retryTitle">Bubs nooooo 😭 Even superheroes need a retry.</h2>
+      <button class="bigBtn" id="retryBtn">TRY AGAIN, CUTIE</button>
+    </div>
+
+    <div id="cinematicPanel" class="overlayPanel hidden">
+      <div id="cinematicText" style="font-size:20px; line-height:1.6; max-width:600px;"></div>
+    </div>
+
+    <div id="bossIntroPanel" class="overlayPanel hidden">
+      <h2 style="color:#ffd9ec;">BONUS ROUND UNLOCKED!</h2>
+      <h2 style="font-size:26px;">YOUR ANNOYING MAN</h2>
+      <p>Weakness: Kisses.</p>
+      <p class="note" style="color:#fff;">Bubs, your time has come. 💀</p>
+      <button class="bigBtn" id="bossStartBtn">I HAVE BEEN WAITING FOR THIS.</button>
+    </div>
+
+    <div id="endingPanel" class="overlayPanel hidden">
+      <div id="endingText" style="font-size:18px; line-height:1.7; max-width:600px;"></div>
+      <button class="bigBtn hidden" id="kissBtn">FINE. ONE KISS. 💋</button>
+      <button class="bigBtn hidden" id="playAgainBtn">PLAY AGAIN</button>
+    </div>
+   </div>
+  </div>
+
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
